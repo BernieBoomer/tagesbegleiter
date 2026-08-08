@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.env
+*.db
+*.log
+*.pid
+venv/
+.venv/
+alembic/
+alembic.ini
+start.sh
