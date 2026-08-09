@@ -1,8 +1,8 @@
 import os
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from app.db import init_db
+from app.auth import verify_api_key
 from app.routers import todos, calendar, contacts, visit_notes, mail, transcribe, waste
 
 app = FastAPI(
@@ -23,32 +23,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-API_KEY = os.environ.get("TAGESBEGLEITER_API_KEY", "")
-EXEMPT_PATHS = {"/health", "/docs", "/openapi.json", "/redoc"}
+# Keine eigene Middleware mehr — Auth läuft ausschliesslich über verify_api_key (app/auth.py).
+# auth.py ist fail-closed: 500 wenn API_KEY nicht gesetzt, 401 bei falschem Key.
+# EXEMPT: /health, /docs, /openapi.json, /redoc (kein Depends nötig, kein Key in Signatur)
 
-@app.middleware("http")
-async def api_key_middleware(request: Request, call_next):
-    if request.url.path in EXEMPT_PATHS:
-        return await call_next(request)
-    if API_KEY:
-        key = request.headers.get("X-API-Key", "")
-        if key != API_KEY:
-            return JSONResponse(status_code=401, content={"detail": "Ungültiger oder fehlender API-Key"})
-    return await call_next(request)
 
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
     transcribe.load_model()  # Preload Whisper-Modell
 
+
 @app.get("/health", tags=["system"])
 def health() -> dict:
     return {"status": "ok", "version": "0.2.0"}
 
-app.include_router(todos.router,       prefix="/v1/todos",       tags=["todos"])
-app.include_router(calendar.router,    prefix="/v1/calendar",    tags=["calendar"])
-app.include_router(contacts.router,    prefix="/v1/contacts",    tags=["contacts"])
-app.include_router(visit_notes.router, prefix="/v1/visit-notes", tags=["visit-notes"])
-app.include_router(mail.router,        prefix="/v1/mail",        tags=["mail"])
-app.include_router(transcribe.router,  tags=["voice"])  # /voice/transcribe, /voice/transcribe/sync
-app.include_router(waste.router,       prefix="/v1",             tags=["waste"])  # /v1/waste/upload, /v1/waste/today
+
+_auth = [Depends(verify_api_key)]
+
+app.include_router(todos.router,       prefix="/v1/todos",       tags=["todos"],       dependencies=_auth)
+app.include_router(calendar.router,    prefix="/v1/calendar",    tags=["calendar"],    dependencies=_auth)
+app.include_router(contacts.router,    prefix="/v1/contacts",    tags=["contacts"],    dependencies=_auth)
+app.include_router(visit_notes.router, prefix="/v1/visit-notes", tags=["visit-notes"], dependencies=_auth)
+app.include_router(mail.router,        prefix="/v1/mail",        tags=["mail"],        dependencies=_auth)
+app.include_router(transcribe.router,  tags=["voice"],           dependencies=_auth)
+app.include_router(waste.router,       prefix="/v1",             tags=["waste"],       dependencies=_auth)
