@@ -127,3 +127,29 @@ class WastePickup(SQLModel, table=True):
     category: str           # z.B. "Restmüll", "Biomüll", "Gelbe Tonne"
     raw_summary: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ---------------------------------------------------------------------------
+# ShoppingItem  — Einkaufsliste
+# ---------------------------------------------------------------------------
+
+class ShoppingItemBase(SQLModel):
+    name: str
+    quantity: Optional[str] = None   # z.B. "2", "1 kg", "eine Packung"
+    done: bool = False
+
+
+class ShoppingItem(ShoppingItemBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ShoppingItemCreate(ShoppingItemBase):
+    pass
+
+
+class ShoppingItemUpdate(SQLModel):
+    name: Optional[str] = None
+    quantity: Optional[str] = None
+    done: Optional[bool] = None
+

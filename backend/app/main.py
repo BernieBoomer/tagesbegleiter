@@ -3,12 +3,12 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from app.db import init_db
 from app.auth import verify_api_key
-from app.routers import todos, calendar, contacts, visit_notes, mail, transcribe, waste
+from app.routers import todos, calendar, contacts, visit_notes, mail, transcribe, waste, shopping
 
 app = FastAPI(
     title="Tagesbegleiter API",
     version="0.2.0",
-    description="Persönlicher KI-Gedächtnisassistent — API-Backend",
+    description="Persoenlicher KI-Gedaechnisassistent — API-Backend",
 )
 
 app.add_middleware(
@@ -23,9 +23,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Keine eigene Middleware mehr — Auth läuft ausschliesslich über verify_api_key (app/auth.py).
+# Keine eigene Middleware mehr — Auth laeuft ausschliesslich ueber verify_api_key (app/auth.py).
 # auth.py ist fail-closed: 500 wenn API_KEY nicht gesetzt, 401 bei falschem Key.
-# EXEMPT: /health, /docs, /openapi.json, /redoc (kein Depends nötig, kein Key in Signatur)
+# EXEMPT: /health, /docs, /openapi.json, /redoc (kein Depends noetig, kein Key in Signatur)
 
 
 @app.on_event("startup")
@@ -48,3 +48,4 @@ app.include_router(visit_notes.router, prefix="/v1/visit-notes", tags=["visit-no
 app.include_router(mail.router,        prefix="/v1/mail",        tags=["mail"],        dependencies=_auth)
 app.include_router(transcribe.router,  tags=["voice"],           dependencies=_auth)
 app.include_router(waste.router,       prefix="/v1",             tags=["waste"],       dependencies=_auth)
+app.include_router(shopping.router,    tags=["shopping"],        dependencies=_auth)
